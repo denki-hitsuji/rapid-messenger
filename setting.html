@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" 
+    integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    </head>
+  <body>
+   <?!= HtmlService.createHtmlOutputFromFile('js').getContent(); ?>
+    <form>
+    <label>bit.lyトークン</label><input type="text" id="bitly_token" name="bitly_token" class="float-right"
+      value="<?= PropertiesService.getDocumentProperties().getProperty("bitly_token") ?>" />
+    <br/>
+    <label>投稿文テンプレート</label><input type="text" id="templateDocId" name="templateDocId" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("templateDocId") ?>" />  
+    <br/>
+    <label>依頼メールテンプレート</label><input type="text" id="mailTemplate" name="mailTemplate" class="float-right" 
+      value="<?= PropertiesService.getDocumentProperties().getProperty("mailTemplate") ?>" />
+    <br/>
+    <label>短縮前URL列</label><input type="text" id="originUrlCol" name="originUrlCol" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("originUrlCol") ?>" />
+    <br/>
+    <label>短縮URL出力列</label><input type="text" id="newUrlCol" name="newUrlCol" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("newUrlCol") ?>" />
+    <br/>
+    <label>ドキュメントID出力列</label><input type="text" id="newIdCol" name="newIdCol" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("newIdCol") ?>" />
+    <br/>
+    <label>メール内呼称列</label><input type="text" id="nicknameCol" name="nicknameCol" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("nicknameCol") ?>" />
+    <br/>
+    <label>メールアドレス列</label><input type="text" id="mailAddressCol" name="mailAddressCol" class="float-right" 
+    value="<?= PropertiesService.getDocumentProperties().getProperty("mailAddressCol") ?>" />
+    <br/>
+
+    <div class="float-right " >
+    <input type="button" value="保存" onclick="saveSettings();">    
+    <input type="button" value="閉じる"  onclick="google.script.host.close()">
+    </div>
+</form>
+
+  </body>
+  
+</html>
+
+
