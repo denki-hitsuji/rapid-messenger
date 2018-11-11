@@ -1,0 +1,15 @@
+<script>
+function deployFromFile(){
+  var e = new Object();
+  e.row_number = document.getElementById('row_number').value;
+//  alert('e');
+
+  google.script.run.withFailureHandler(onError).deploy(e);
+  google.script.host.close();
+}
+
+function onError(){
+  alert('設定値が保存できませんでした。');
+}
+</script>
+
