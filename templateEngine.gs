@@ -48,7 +48,7 @@ function getMailTemplateTitle(document){
       }
       templateTitle += theParagraph.getText() + "\n"; //最初の段落の内容を取得
     }
-    Logger.log("テンプレート全体： " + templateTitle); 
+    Logger.log("テンプレートタイトル： " + templateTitle); 
     return templateTitle;
 }
 
@@ -67,7 +67,7 @@ function getMailTemplateBody(document){
     var searchResult = null;
     while (searchResult = body.findElement(searchTypeParagraph, searchResult)) {
       var theParagraph = searchResult.getElement().asParagraph();
-      if(body.getChildIndex(theParagraph) < body.getChildIndex( theHr.getParent())){
+      if(body.getChildIndex(theParagraph) < body.getChildIndex(theHr.getParent())){
         Logger.log("水平線が見つかりました。" );
         body.removeChild(theParagraph);        
         break;
