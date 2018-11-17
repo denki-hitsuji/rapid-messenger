@@ -6,6 +6,7 @@ function getNewUrlCol(){
   newUrlCol = PropertiesService.getDocumentProperties().getProperty("newUrlCol");
   if(newUrlCol == null || newUrlCol == "undefined")
   { newUrlCol = "AA"; }
+  Logger.log("newIdCol=" + newUrlCol ); 
   return newUrlCol;
 }
 var newIdColCache;

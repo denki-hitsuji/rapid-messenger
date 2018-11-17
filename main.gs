@@ -2,40 +2,11 @@ function onInstall(e){
   onOpen(e);
 }
 
-function deleteMetaData(key){
-  // get all the things and delete them in one go
-  var requests = ["firstFileId","secondFileId"]
-   .map (function (d) {
-     return {
-       deleteDeveloperMetadata: {
-         dataFilter:{
-           developerMetadataLookup: {
-           metadataKey: d
-         }}
-       }};
-      });
-
-  Logger.log (JSON.stringify(requests));
-  if (requests.length) {
-    var result = Sheets.Spreadsheets.batchUpdate({requests:requests}, ss.getId());
-    Logger.log (JSON.stringify(result));
-  }
+function deleteStartRow(){
+PropertiesService.getDocumentProperties().deleteProperty("startRow");
 }
 
-function setMetaData(key, value){
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var finder = ss.createDeveloperMetadataFinder();
-  
-  ss.addDeveloperMetadata("firstFileId", "hoge");
-  ss.addDeveloperMetadata("secondFileId", "funi");
-  var data=finder.withKey("firstFileId").find();
-  for(var i=0; i<data.length; i++){
-    
-    Logger.log(data[i].getValue());
-  }
-}
-
-function onOpen(e) {
+function onOpen(e) {  
   Logger.log('AuthMode: ' + e.authMode);
   var menu = SpreadsheetApp.getUi().createAddonMenu();
   if(e && e.authMode == 'NONE'){
@@ -43,7 +14,7 @@ function onOpen(e) {
   } else {
     var lang = Session.getActiveUserLocale();
     menu.addItem('URL短縮', 'generateShortUrls')
-      .addItem('投稿文生成', 'createFiles')
+      .addItem('配信サンプル生成', 'createFiles')
       .addItem('メール送信', 'sendMails')
       .addItem('結果をクリア', 'clearUrls')
       .addItem('設定', 'showDialog');
@@ -52,7 +23,6 @@ function onOpen(e) {
     if(setDefault == 1){
       menu.addItem('初期値設定', 'defineDefaultProperties');
     }
-
   };
   menu.addToUi();
 };
@@ -138,7 +108,7 @@ function askEnabled(){
 function clearUrls(){
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
 
-//  Browser.msgBox ("rowSheet OK");
+//  Browser.msgBox ("endRow OK");
   var newUrlCol = getNewUrlCol(); //24;
   var docIdCol = getNewIdCol();
   var lastRow =mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
@@ -265,7 +235,7 @@ function logProperties(){
 function sendMails(){
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
-  var rowSheet=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
+  var endRow=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
 
   /* メールテンプレートは独立した文書 */
   // 紹介依頼メールテンプレート
@@ -275,7 +245,7 @@ function sendMails(){
   var mailTemplate = DocumentApp.openById(mailTemplateId);
   var title = getMailTemplateTitle(mailTemplate);
 
-  for(var i=2;i<=rowSheet;i++){
+  for(var i=2;i<=endRow;i++){
     var personName = getRange(mySheet, i,NAME_COL).getValue().replace(" ", "");
     if (personName.length == 0){
       break;
@@ -339,8 +309,8 @@ function generateShortUrls(){
 
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
-  var rowSheet = mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
-  for(var i = 2 ; i <= rowSheet; i++ ){
+  var endRow = mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
+  for(var i = 2 ; i <= endRow; i++ ){
     var personName = getRange(mySheet,i,NAME_COL).getValue().replace(" ", "");
     if (personName.length == 0){
       Logger.log("終了します。");
@@ -350,12 +320,13 @@ function generateShortUrls(){
     var newUrlCol = getNewUrlCol();
     var originUrlCol = getOriginUrlCol();
     
-    var currentValue = getRange(mySheet,i,newUrlCol).getValue();
-    if( currentValue != ""){
+    var newUrl = getRange(mySheet,i,newUrlCol).getValue();
+    if( newUrl != ""){
       continue;
     }
     
     var originUrl = getRange(mySheet,i,originUrlCol).getValue();　// 元のURL
+    //Browser.msgBox("originUrl =" + originUrl);
     var shortUrl =  shorten(originUrl);
     getRange(mySheet,i,newUrlCol).setValue(shortUrl);
   }
@@ -385,46 +356,87 @@ function letterToColumn(letter)
 }
 
 function generateFiles(folder){
+  //◆開始時刻を取得
+  var startTime = new Date();
+  Logger.log("startTime:" + startTime);
+  var props = PropertiesService.getDocumentProperties();
+
+  //◆何行目まで処理したかを保存するときに使用するkey
+  var resumeSheetKey = 'resumeSheet';
+  var activeSsheetName = SpreadsheetApp.getActiveSheet().getSheetName();
+ // Browser.msgBox(sheetName);
+ // return;
+  props.setProperty(resumeSheetKey, activeSsheetName);
+  var startRowKey = "startRow";
+  var triggerKey = "trigger";
+  var startRow = parseInt(props.getProperty(startRowKey));
+  if(!startRow){
+    //初めて実行する場合はこっち。!startRow　は、startRowが0（空）の時。↓で初期値（始める行数）を設定
+    startRow = 2;
+  }
   
   /* スプレッドシートのシートを取得と準備 */
-  var mySheet=SpreadsheetApp.getActive().getSheetByName("リスト"); //シートを取得
-  var rowSheet=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
-  var sheetValues = mySheet.getDataRange().getValues();
-  Logger.log("rows:"+sheetValues.length);
-  sheetValues.unshift(new Array(3));
-  Logger.log("rows:"+sheetValues.length);
+  // 中断に備えて、処理中のシート名を控えておく
+  var sheetName = props.getProperty(resumeSheetKey);
+  var mySheet=SpreadsheetApp.getActive().getSheetByName(sheetName); 
+  var endRow=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
   var docIdCol = getNewIdCol();
 
-  /* テンプレートは独立した文書で、ひとつだけ使う */
-  var props = PropertiesService.getDocumentProperties();
+  /* テンプレートは独立した文書で、ひとつだけ */
   var strDocUrl= props.getProperty("templateDocId"); //ドキュメントのURL
   var templateFile = DriveApp.getFileById(strDocUrl); 
     
-  /* シートの全ての行について社名、姓名を差し込みログに表示*/
-  for(var i=2;i<sheetValues.length;i++){
-    sheetValues[i].unshift('');
-    var existingFile =  sheetValues[i][letterToColumn(docIdCol)];
-    if(0 < existingFile.length){
+  /* シートの全ての行について姓名を差し込みファイルを生成*/
+  for(var i=startRow;i<=endRow;i++){
+    
+     //◆開始時刻（startTime）とここの処理時点の時間を比較する 
+    var passedHalfMinutes = parseInt((new Date() - startTime) / (1000 * 30)); 
+    if(8 <= passedHalfMinutes){
+      //4分経過していたら処理を中断
+      Logger.log("Aborting on: Row " + i);
+
+      //何行まで処理したかを保存　参考:http://tbpgr.hatenablog.com/entry/2016/12/20/233349
+      //props.setProperty(startRowKey, i);
+      //トリガーを発行
+      setTrigger(triggerKey, "createFiles");
+      return;
+    }
+    
+    var personName = getRange(mySheet,i,NAME_COL).getValue().replace(" ", "");
+    
+    // 名前が途切れたところで処理終了
+    if (personName.length == 0){
+      deleteStartRow();
+      break;
+    }
+
+    var newUrlCol = getNewUrlCol(); 
+    var shortUrl = getRange(mySheet,i,newUrlCol).getValue();　// 短縮URL
+    var existingDocument = getRange(mySheet,i,docIdCol).getValue();
+    // 行をスキップする基準は、1.すでにドキュメントが生成済み 2.短縮URLが生成されてない
+    if(0 == shortUrl.length){
+      // Browser.msgBox(i + "行目はスキップ");
+      continue;
+    }
+    else if(0 < existingDocument.length)
+    {
+      //  Browser.msgBox(i + "行目は生成済み");
       continue;
     }
     
-    var number = "000" + sheetValues[i][1];
-    number = number.substring(number.length - 3);
-    var personName = sheetValues[i][letterToColumn(NAME_COL)].replace(" ", "");
-    if (personName.length == 0){
-      break;
-    }
+    Logger.log(i + "行目:" + shortUrl + " " + shortUrl.length );
+ 
+    
+    var number = "000" + getRange(mySheet,i,1).getValue();
+    number = number.substring(number.length - 3);    
     var fileName = number + "_" + personName + "さん";
 
     var newFile = templateFile.makeCopy(fileName, folder);
-//    var docIdCol = 
     getRange(mySheet,i,docIdCol).setValue(newFile.getId()); // 新しいドキュメントIDを控えておく
     var newDocument=DocumentApp.openById(newFile.getId()); //ドキュメントをIDで取得
     var body = newDocument.getBody();
  
-    var newUrlCol = getNewUrlCol(); 
-    var shortUrl = sheetValues[i][letterToColumn(newUrlCol)];　// 短縮URL
-    var partnerName = sheetValues[i][letterToColumn(NAME_COL)];　// 紹介者名
+    var partnerName =  getRange(mySheet,i,NAME_COL).getValue();　// 紹介者名
 //    var strMessage =mySheet.getRange(i,3).getValue();　//メッセージ 
 
     // 新しい本文を生成 (ここで置換を全部やる)
@@ -438,6 +450,8 @@ function generateFiles(folder){
     Logger.log("書き込みました：" + newBody); //ドキュメントの内容をログに表示
  
   }
+
+
 }
 
 //◆指定したkeyに保存されているトリガーIDを使って、トリガーを削除する
@@ -446,28 +460,33 @@ var triggerId = PropertiesService.getDocumentProperties().getProperty(triggerKey
  
 if(!triggerId) return;
  
-ScriptApp.getDocumentProperties().filter(function(trigger){
+ScriptApp.getProjectTriggers().filter(function(trigger){
 return trigger.getUniqueId() == triggerId;
 })
 .forEach(function(trigger) {
 ScriptApp.deleteTrigger(trigger);
 });
 PropertiesService.getDocumentProperties().deleteProperty(triggerKey);
+  Logger.log("Trigger deleted: " + triggerId);
+
 }
  
 //◆トリガーを発行。トリガーを発行した箇所から
 function setTrigger(triggerKey, funcName){
  
-//保存しているトリガーがあったら削除
-deleteTrigger(triggerKey);
-var dt = new Date();
- 
-//１分後に再実行
-dt.setMinutes(dt.getMinutes() + 1);
-var triggerId = ScriptApp.newTrigger(funcName).timeBased().at(dt).create().getUniqueId();
- 
-//あとでトリガーを削除するためにトリガーIDを保存しておく
-PropertiesService.getDocumentProperties().setProperty(triggerKey, triggerId);
+  //保存しているトリガーがあったら削除
+  deleteTrigger(triggerKey);
+  var dt = new Date();
+  
+  //再実行
+  dt.setTime(dt.getTime() + (1000 * 40));
+//  dt.setMinutes(dt.getMinutes() + 1);
+  var triggerId = ScriptApp.newTrigger(funcName).timeBased().at(dt).create().getUniqueId();
+  
+  Logger.log("Trigger set: " + triggerId);
+  
+  //あとでトリガーを削除するためにトリガーIDを保存しておく
+  PropertiesService.getDocumentProperties().setProperty(triggerKey, triggerId);
 }
 
 // 水平線の手前まで、ドキュメントの内容を取得します。
