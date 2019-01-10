@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" 
+    integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    </head>
+  <body>
+   <?!= HtmlService.createHtmlOutputFromFile('js').getContent(); ?>
+    <form>
+    <label>1.配信サンプルテンプレート</label>    <br/>
+    <label>紹介者のお名前（フルネーム呼び）</label><input type="text" class="float-right" 
+    value="{紹介者}" />  
+    <br/>
+    <label>紹介者のお名前（略称呼び）</label><input type="text" class="float-right" 
+    value="{紹介者呼称}" />  
+    <br/>
+    <label>短縮URLに差し替わる部分</label><input type="text" class="float-right" 
+    value="{短縮URL}" />  
+    <br/>
+    <hr/>
+    <label>2.依頼メールテンプレート</label>    <br/>
+    <label>紹介者のお名前（略称呼び）</label><input type="text" class="float-right" 
+    value="{お名前}" />  
+    <br/>
+    <label>配信サンプルのURL</label><input type="text" class="float-right" 
+    value="{ドキュメント}" />  
+    <br/>
+
+    <div class="float-right " >
+    <input type="button" value="閉じる"  onclick="google.script.host.close()">
+    </div>
+</form>
+
+  </body>
+  
+</html>
+
+

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" 
+    integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    </head>
+  <body>
+   <?!= HtmlService.createHtmlOutputFromFile('js').getContent(); ?>
+    <form>
+    <label>1.shared_sample</label>    <br/>
+    <label>partner full name</label><input type="text" class="float-right" 
+    value="{partnerName}" />  
+    <br/>
+    <label>partner nickname</label><input type="text" class="float-right" 
+    value="{nickname}" />  
+    <br/>
+    <label>short Url</label><input type="text" class="float-right" 
+    value="{shortUrl}" />  
+    <br/>
+    <hr/>
+    <label>2.request_email</label>    <br/>
+    <label>nickname</label><input type="text" class="float-right" 
+    value="{nickname}" />  
+    <br/>
+    <label>document URL</label><input type="text" class="float-right" 
+    value="{docUrl}" />  
+    <br/>
+
+    <div class="float-right " >
+    <input type="button" value="閉じる"  onclick="google.script.host.close()">
+    </div>
+</form>
+
+  </body>
+  
+</html>
+
+

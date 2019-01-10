@@ -1,3 +1,9 @@
+function test(){
+  var userName = "山崎昌宏";
+  var emailAddress = "myamazaki08@gmail.com";  
+    startCopy(userName, emailAddress);
+
+}
 /* 
 ・使い方
 getFeatureName に名前をつけて startCopy 実行します。
@@ -98,6 +104,60 @@ function folderCopy(sourceFolder, createdFolder) {
   }
 }
 
+function getParentFolder(){
+  var sheetId = SpreadsheetApp.getActiveSpreadsheet().getId();
+  Logger.log("スプレッドシートID：" + sheetId);
+  var file = DriveApp.getFileById(sheetId);
+  var thisFolder  = file.getParents().next();
+  if(!thisFolder.getParents().hasNext()) return null; 
+  
+  var parentFolder = thisFolder.getParents().next();
+  return parentFolder;
+}
+
+function newCampaign(){
+  // 新しいキャンペーンフォルダを作る
+  var parentFolder = getParentFolder();
+  var newFolderName = "新しいキャンペーン";
+  var newFolder = parentFolder.createFolder(newFolderName);
+  newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+
+  
+  // ソースファイル一式をコピーする
+  var sourceFolder = DriveApp.getFolderById(getFolderId("Source"));
+  folderCopy(sourceFolder, newFolder);
+
+  // このファイルから、リストをコピーする
+  
+  var createdFiles = newFolder.getFiles();  
+  while(createdFiles.hasNext()){
+    var file = createdFiles.next();
+    var fileName = file.getName();
+    if(-1 < fileName.search("3.") )
+    {
+      // 応援者リストなので、リストをコピーする
+      copyList(file);
+    }
+  }
+  
+}
+
+// このフォルダの値を転記します。
+function copyList(destFile){
+  var thisSheet = SpreadsheetApp.getActiveSheet();
+  
+  var listCells = "C2:F200";
+  var remarksCells = "AI2:AI200";
+  var destSheet = SpreadsheetApp.open(destFile).getSheetByName("リスト");
+  var listValues = thisSheet.getRange(listCells).getValues();  
+  destSheet.getRange(listCells).setValues(listValues);
+  
+  var remarks = thisSheet.getRange(remarksCells).getValues();  
+  destSheet.getRange(remarksCells).setValues(remarks);
+  
+}
+
+
 // フォルダ内にあるファイルのURLを列挙したテキストファイルを作成する
 function createFileDescribedAllURL(createdFolder){
   var createdFiles = createdFolder.getFiles();
@@ -134,7 +194,7 @@ function modifyTemplates (createdFolder, name){
       replaceName(file, name);
       continue;
     }
-    if(-1 < fileName.search("2.") )
+    if(-1 < fileName.search("3.") )
     {
       // 応援者リストなので、LPのリンクを挿入する
       var lpLink = getLpUrl();

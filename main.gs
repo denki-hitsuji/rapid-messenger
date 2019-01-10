@@ -1,5 +1,5 @@
 function onInstall(e){ 
-  onOpen(e);
+//  onOpen(e);
 }
 
 function deleteStartRow(){
@@ -8,24 +8,83 @@ PropertiesService.getDocumentProperties().deleteProperty("startRow");
 
 function onOpen(e) {  
   Logger.log('AuthMode: ' + e.authMode);
+  var lang = Session.getActiveUserLocale();
   var menu = SpreadsheetApp.getUi().createAddonMenu();
   if(e && e.authMode == 'NONE'){
-    menu.addItem('使用開始', 'askEnabled');
+    var startLabel = lang === 'ja' ? '使用開始' : 'start';
+    menu.addItem(startLabel, 'askEnabled');
   } else {
-    var lang = Session.getActiveUserLocale();
+    if( lang === 'ja')
+    {
     menu.addItem('URL短縮', 'generateShortUrls')
       .addItem('配信サンプル生成', 'createFiles')
       .addItem('メール送信', 'sendMails')
       .addItem('結果をクリア', 'clearUrls')
+      .addItem('新規キャンペーン', 'newCampaign')    
       .addItem('設定', 'showDialog');
-    var userProps = PropertiesService.getUserProperties();
-    var setDefault = userProps.getProperty("willSetDefault");
-    if(setDefault == 1){
+//    var userProps = PropertiesService.getUserProperties();
+//    var setDefault = userProps.getProperty("willSetDefault");
+//    if(setDefault == 1){
       menu.addItem('初期値設定', 'defineDefaultProperties');
+      menu.addItem('置き換え文字列一覧', 'showKeywords');
     }
+    else{
+    menu.addItem('shorten URL', 'generateShortUrls')
+      .addItem('generate doc', 'createFiles')
+      .addItem('send emails', 'sendMails')
+      .addItem('clear result', 'clearUrls')
+      .addItem('new campaign', 'newCampaign')    
+      .addItem('config', 'showDialog');
+//    var userProps = PropertiesService.getUserProperties();
+//    var setDefault = userProps.getProperty("willSetDefault");
+//    if(setDefault == 1){
+      menu.addItem('set default', 'defineDefaultProperties');
+      menu.addItem('show placeholders', 'showKeywords_en');
+    }
+//      menu.addItem('新規プロジェクト', 'defineDefaultProperties');
+//    }
+    //setDefaultIfBlank();
   };
   menu.addToUi();
+
 };
+
+function showKeywords(){
+  var html = HtmlService.createTemplateFromFile('keywords.html').evaluate()
+      .setWidth(450)
+      .setHeight(300);
+  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+      .showModalDialog(html, '置き換え文字列一覧');}
+
+function newCampaign(){
+  
+}
+
+
+function showKeywords_en(){
+  var html = HtmlService.createTemplateFromFile('keywords_en.html').evaluate()
+      .setWidth(450)
+      .setHeight(300);
+  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+      .showModalDialog(html, 'Placeholder List');}
+
+function newCampaign(){
+  
+}
+
+function setDefaultIfBlank(){
+  var isDocPartnerList = SpreadsheetApp.getActive().getName().match(/^3./);
+  if(!isDocPartnerList){
+    return;
+  }
+  
+  var docProps = PropertiesService.getDocumentProperties();
+  var token = docProps.getProperty("bitly_token");
+  var isBlank = token == null || token.length === 0; 
+  if(isBlank){
+    defineDefaultProperties();
+  }
+}
 
 function log_WillSetDefault(){
   var userProps = PropertiesService.getUserProperties();
@@ -58,10 +117,14 @@ function getTemplateIdTest(){
 }
 
 function getTemplateId(title){
+  
   var ss = SpreadsheetApp.getActive();
   var ssid =ss.getId();
   Logger.log("active spreadsheet id : " + ssid);
   var ssFile = DriveApp.getFileById(ssid);
+  if(ssFile == null) 
+    return null;
+   
   Logger.log("file got ");
   var parents = ssFile.getParents();
   Logger.log("parents hasNext? : " + parents.hasNext());
@@ -168,6 +231,16 @@ function test(){
 function createFiles(){  
   var newFolder = createNewFolder();
   
+  var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
+  var newUrlCol = getNewUrlCol(); 
+  var shortUrl = getRange(mySheet,2,newUrlCol).getValue();　// 短縮URL
+
+  if(shortUrl == "undefined"){
+    clearUrls();
+  }
+  if(shortUrl.length == 0){
+    generateShortUrls();
+  }
   generateFiles(newFolder);
 }
 
@@ -257,25 +330,43 @@ function sendMails(){
     
     var documentId = getRange(mySheet, i,docIdCol).getValue(); // ドキュメントID 
     var fileUrl = DriveApp.getFileById(documentId).getUrl();
-    var hisName = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
+    var nickname = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
     var emailAddress = getRange(mySheet,i,mailAddressCol).getValue();　
-    if (documentId.length == 0 || hisName.length == 0 ||  emailAddress.length == 0){
+    if (documentId.length == 0 || nickname.length == 0 ||  emailAddress.length == 0){
       continue;
     }
 
+    var newBody = "";
+
     var body = getMailTemplateBody(mailTemplate);
     // 新しい本文を生成 (ここで置換を全部やる)
-    var newBody=body
-      .replaceText("{お名前}",hisName)
+    var lang = Session.getActiveUserLocale();
+    if(lang　=== 'ja'){
+      newBody=body
+      .replaceText("{お名前}",nickname)
       .replaceText("{ドキュメント}",fileUrl);
-    
+    } else {
+      newBody=body
+      .replaceText("{nickname}",nickname)
+      .replaceText("{docUrl}",fileUrl);
+    }
     // リンクを編集
     var mailBody = replaceLink(newBody, fileUrl).getText();
     
     var to = emailAddress;
-    var subject = title
-      .replace(/{お名前}/,hisName)
+    var subject = "";
+    
+    if(lang　=== 'ja'){
+      subject = title
+      .replace(/{お名前}/,nickname)
       .replace(/{ドキュメント}/,fileUrl);    
+    } else {
+      subject = title
+      .replace(/{nickname}/,nickname)
+      .replace(/{docUrl}/,fileUrl);          
+    }
+    
+    var mailSent = lang　=== 'ja' ? "メールを送信しました：" : "email(s) sent.";
     
     // 生成した本文をメールで送信  
     GmailApp.sendEmail(
@@ -283,8 +374,9 @@ function sendMails(){
       subject,
       mailBody
     ); //MailAppではfromが設定できないとのこと
-    Logger.log("メールを送信しました：" + to); //ドキュメントの内容をログに表示
+    Logger.log(mailSent + to); //ドキュメントの内容をログに表示
 //     Logger.log(newBody.getText());
+    SpreadsheetApp.getUi().alert(mailSent);
   }
    
 }
@@ -306,6 +398,7 @@ function replaceLink(body, url){
 
 function generateShortUrls(){
   Logger.log("スプレッドシート内のURLを短縮します。");
+  setDefaultIfBlank();  
 
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
@@ -326,6 +419,7 @@ function generateShortUrls(){
     }
     
     var originUrl = getRange(mySheet,i,originUrlCol).getValue();　// 元のURL
+    Logger.log(originUrl);
     //Browser.msgBox("originUrl =" + originUrl);
     var shortUrl =  shorten(originUrl);
     getRange(mySheet,i,newUrlCol).setValue(shortUrl);
@@ -337,7 +431,7 @@ function shorten(originUrl){
    //return url.id; 
   
    var token = PropertiesService.getDocumentProperties().getProperty("bitly_token");
-   var url = "https://api-ssl.bitly.com/v3/shorten?access_token=" + token + "&longUrl=" + originUrl;
+   var url = "https://api-ssl.bitly.com/v3/shorten?access_token=" + token + "&longUrl=" + encodeURIComponent(originUrl);
    var responseApi = UrlFetchApp.fetch(url);
    var responseJson = JSON.parse(responseApi.getContentText());
    return responseJson["data"]["url"];
@@ -412,6 +506,12 @@ function generateFiles(folder){
 
     var newUrlCol = getNewUrlCol(); 
     var shortUrl = getRange(mySheet,i,newUrlCol).getValue();　// 短縮URL
+    // 短縮URLがない場合は処理終了
+    if (shortUrl.length == 0 || shortUrl == "undefined"){
+      deleteStartRow();
+      break;
+    }
+
     var existingDocument = getRange(mySheet,i,docIdCol).getValue();
     // 行をスキップする基準は、1.すでにドキュメントが生成済み 2.短縮URLが生成されてない
     if(0 == shortUrl.length){
@@ -429,20 +529,37 @@ function generateFiles(folder){
     
     var number = "000" + getRange(mySheet,i,1).getValue();
     number = number.substring(number.length - 3);    
-    var fileName = number + "_" + personName + "さん";
+    
+    var lang = Session.getActiveUserLocale();
+    var fileName = number + "_" + personName + lang　=== 'ja' ? "さん" : "";
 
     var newFile = templateFile.makeCopy(fileName, folder);
-    getRange(mySheet,i,docIdCol).setValue(newFile.getId()); // 新しいドキュメントIDを控えておく
+    var docIdCell = getRange(mySheet,i,docIdCol);
+
+    docIdCell.setValue('=HYPERLINK("' + newFile.getUrl() + '","' + newFile.getId() + '")' ); // 新しいドキュメントIDを控えておく
+
     var newDocument=DocumentApp.openById(newFile.getId()); //ドキュメントをIDで取得
     var body = newDocument.getBody();
- 
+    
+    var nicknameCol = getNicknameCol();
     var partnerName =  getRange(mySheet,i,NAME_COL).getValue();　// 紹介者名
+    var nickname = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
 //    var strMessage =mySheet.getRange(i,3).getValue();　//メッセージ 
 
     // 新しい本文を生成 (ここで置換を全部やる)
-    var newBody=body
+    var newBody = "";
+    var lang = Session.getActiveUserLocale();
+    if(lang　=== 'ja'){
+      newBody=body
       .replaceText("{紹介者}",partnerName)
+      .replaceText("{紹介者呼称}",nickname)
       .replaceText("{短縮URL}",shortUrl);
+    } else {
+      newBody=body
+      .replaceText("{partnerName}",partnerName)
+      .replaceText("{nickname}",nickname)
+      .replaceText("{shortUrl}",shortUrl);
+    }
 
     // リンクを編集
     replaceLink(newBody, shortUrl);
