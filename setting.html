@@ -8,6 +8,9 @@
   <body>
    <?!= HtmlService.createHtmlOutputFromFile('js').getContent(); ?>
     <form>
+    <label>メール送信者名</label><input type="text" id="user_name" name="user_name" class="float-right"
+      value="<?= PropertiesService.getUserProperties().getProperty("userName") ?>" />
+    <br/>
     <label>bit.lyトークン</label><input type="text" id="bitly_token" name="bitly_token" class="float-right"
       value="<?= PropertiesService.getDocumentProperties().getProperty("bitly_token") ?>" />
     <br/>

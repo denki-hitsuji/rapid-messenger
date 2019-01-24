@@ -166,8 +166,6 @@ function askEnabled(){
   ui.alert(title, msg, ui.ButtonSet.OK);
 };
 
-
-
 function clearUrls(){
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
 
@@ -198,7 +196,7 @@ function clearUrls(){
 function showDialog() {
   var html = HtmlService.createTemplateFromFile('setting.html').evaluate()
       .setWidth(400)
-      .setHeight(300);
+      .setHeight(400);
   SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
       .showModalDialog(html, '設定');
 }
@@ -213,6 +211,8 @@ function saveSettings(e){
   props.setProperty("originUrlCol", e.originUrlCol);
   props.setProperty("nicknameCol", e.nicknameCol);
   props.setProperty("mailAddressCol", e.mailAddressCol);
+  var userProps = PropertiesService.getUserProperties();
+  userProps.setProperty("userName", e.userName);
 
   logProperties();
 }
@@ -309,7 +309,8 @@ function sendMails(){
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
   var endRow=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
-
+  var userName = PropertiesService.getUserProperties().getProperty("userName");
+  
   /* メールテンプレートは独立した文書 */
   // 紹介依頼メールテンプレート
   logProperties();
@@ -368,12 +369,15 @@ function sendMails(){
     
     var mailSent = lang　=== 'ja' ? "メールを送信しました：" : "email(s) sent.";
     
+
     // 生成した本文をメールで送信  
     GmailApp.sendEmail(
       to,
       subject,
-      mailBody
-    ); //MailAppではfromが設定できないとのこと
+      mailBody,
+      {
+      name: userName
+    }); //MailAppではfromが設定できないとのこと
     Logger.log(mailSent + to); //ドキュメントの内容をログに表示
 //     Logger.log(newBody.getText());
     SpreadsheetApp.getUi().alert(mailSent);
