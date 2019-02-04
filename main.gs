@@ -53,7 +53,7 @@ function showKeywords(){
   var html = HtmlService.createTemplateFromFile('keywords.html').evaluate()
       .setWidth(450)
       .setHeight(300);
-  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+  SpreadsheetApp.getUi()
       .showModalDialog(html, '置き換え文字列一覧');}
 
 function newCampaign(){
@@ -65,7 +65,7 @@ function showKeywords_en(){
   var html = HtmlService.createTemplateFromFile('keywords_en.html').evaluate()
       .setWidth(450)
       .setHeight(300);
-  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+  SpreadsheetApp.getUi() 
       .showModalDialog(html, 'Placeholder List');}
 
 function newCampaign(){
@@ -197,7 +197,7 @@ function showDialog() {
   var html = HtmlService.createTemplateFromFile('setting.html').evaluate()
       .setWidth(400)
       .setHeight(400);
-  SpreadsheetApp.getUi() // Or DocumentApp or SlidesApp or FormApp.
+  SpreadsheetApp.getUi() 
       .showModalDialog(html, '設定');
 }
 
