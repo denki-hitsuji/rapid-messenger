@@ -188,8 +188,8 @@ function clearUrls(){
   }
 //  Browser.msgBox ("removeFile OK");
 
-  getRange(mySheet, 2, newUrlCol).offset(0,0,lastRow).clearContent();
-  getRange(mySheet, 2, docIdCol).offset(0,0,lastRow).clearContent();
+  getRange(mySheet, 2, newUrlCol).offset(0,0,lastRow - 1, 0).clearContent();
+  getRange(mySheet, 2, docIdCol).offset(0,0,lastRow - 1, 0).clearContent();
 
 }
 
@@ -305,6 +305,20 @@ function logProperties(){
 
 }
 
+function mailAddressTest(){
+  var address = "-";
+  Logger.log(isValidMailAddress(address));
+  
+  var address2 = "test@example.com";
+  Logger.log(isValidMailAddress(address2));
+}
+
+function isValidMailAddress(mailAddress){
+  var regex = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  var hit = mailAddress.match(regex);
+  return (hit != null);
+}
+
 function sendMails(){
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
@@ -334,6 +348,10 @@ function sendMails(){
     var nickname = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
     var emailAddress = getRange(mySheet,i,mailAddressCol).getValue();　
     if (documentId.length == 0 || nickname.length == 0 ||  emailAddress.length == 0){
+      continue;
+    }
+    
+    if(!isMailAddressValid(emailAddress)){
       continue;
     }
 
