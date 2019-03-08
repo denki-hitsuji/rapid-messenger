@@ -54,10 +54,7 @@ function showKeywords(){
       .setWidth(450)
       .setHeight(300);
   SpreadsheetApp.getUi()
-      .showModalDialog(html, '置き換え文字列一覧');}
-
-function newCampaign(){
-  
+      .showModalDialog(html, '置き換え文字列一覧');
 }
 
 
@@ -67,10 +64,6 @@ function showKeywords_en(){
       .setHeight(300);
   SpreadsheetApp.getUi() 
       .showModalDialog(html, 'Placeholder List');}
-
-function newCampaign(){
-  
-}
 
 function setDefaultIfBlank(){
   var isDocPartnerList = SpreadsheetApp.getActive().getName().match(/^3./);
@@ -383,10 +376,7 @@ function sendMails(){
       subject = title
       .replace(/{nickname}/,nickname)
       .replace(/{docUrl}/,fileUrl);          
-    }
-    
-    var mailSent = lang　=== 'ja' ? "メールを送信しました：" : "email(s) sent.";
-    
+    }    
 
     // 生成した本文をメールで送信  
     GmailApp.sendEmail(
@@ -398,9 +388,17 @@ function sendMails(){
     }); //MailAppではfromが設定できないとのこと
     Logger.log(mailSent + to); //ドキュメントの内容をログに表示
 //     Logger.log(newBody.getText());
-    SpreadsheetApp.getUi().alert(mailSent);
   }
-   
+
+  var mailSent = lang　=== 'ja' ? "メールを送信しました。" : "email(s) sent.";
+  SpreadsheetApp.getUi().alert(mailSent);
+
+}
+
+function isMailAddressValid(mailAddress)
+{
+   var mailFormat = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+   return mailAddress.match(mailFormat);
 }
 
 function replaceLink(body, url){
