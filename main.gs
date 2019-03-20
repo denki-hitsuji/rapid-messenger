@@ -165,7 +165,7 @@ function clearUrls(){
 //  Browser.msgBox ("endRow OK");
   var newUrlCol = getNewUrlCol(); //AA;
   var docIdCol = getNewIdCol(); //AH
-  var lastRow =mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
+  var lastRow = getLastRowNumber(docIdCol); 
 //  Browser.msgBox ("newUrlCol OK " + newUrlCol + " " + docIdCol);
 //  Logger.log("lastRow:" + lastRow);
 
@@ -222,17 +222,31 @@ function test(){
 //  PropertiesService.getScriptProperties().setProperty(key, value);
 //}
 
+function getLastRowNumber(col){
+　 var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
+ var last_row = mySheet.getLastRow();
+
+　for(var i = last_row; i >= 1; i--){
+ 　  if(getRange(mySheet, i, col).getValue() != ''){
+     return i;
+　　　    break;
+　　  } 
+　 }
+}
+
 function createFiles(){  
   var newFolder = createNewFolder();
   
+  // 短縮URLが、最終行まで入っているか判定し、なければ再生成（追記したときにこうなる）
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
   var newUrlCol = getNewUrlCol(); 
-  var shortUrl = getRange(mySheet,2,newUrlCol).getValue();　// 短縮URL
+  var nameLastRow = getLastRowNumber(NAME_COL);
+  var lastShortUrl = getRange(mySheet, nameLastRow ,newUrlCol).getValue();　// 短縮URL
 
-  if(shortUrl == "undefined"){
+  if(lastShortUrl == "undefined"){
     clearUrls();
   }
-  if(shortUrl.length == 0){
+  if(lastShortUrl.length == 0){
     generateShortUrls();
   }
   generateFiles(newFolder);
@@ -424,7 +438,7 @@ function generateShortUrls(){
 
   /* スプレッドシートのシートを取得と準備 */
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
-  var endRow = mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
+  var endRow = getLastRowNumber( NAME_COL); // 名前の最終行を取得
   for(var i = 2 ; i <= endRow; i++ ){
     var personName = getRange(mySheet,i,NAME_COL).getValue().replace(" ", "");
     if (personName.length == 0){
@@ -436,7 +450,9 @@ function generateShortUrls(){
     var originUrlCol = getOriginUrlCol();
     
     var newUrl = getRange(mySheet,i,newUrlCol).getValue();
-    if( newUrl != ""){
+    if(newUrl === "undefined"){
+      getRange(mySheet,i,newUrlCol).setValue("");
+    } else if( newUrl != ""){
       continue;
     }
     
