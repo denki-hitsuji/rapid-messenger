@@ -163,13 +163,14 @@ function clearUrls(){
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
 
 //  Browser.msgBox ("endRow OK");
-  var newUrlCol = getNewUrlCol(); //24;
-  var docIdCol = getNewIdCol();
+  var newUrlCol = getNewUrlCol(); //AA;
+  var docIdCol = getNewIdCol(); //AH
   var lastRow =mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
 //  Browser.msgBox ("newUrlCol OK " + newUrlCol + " " + docIdCol);
-  
+//  Logger.log("lastRow:" + lastRow);
 
-  for(var i=2;i<=lastRow;i++){
+  // ヘッダー行を除いて２行目からデータを取得
+  for(var i=2;i<lastRow;i++){
     var id = getRange(mySheet, i,docIdCol).getValue(); 
     if( id.length === 0 ) continue;
     var removingDoc = DriveApp.getFileById(id);
@@ -181,8 +182,8 @@ function clearUrls(){
   }
 //  Browser.msgBox ("removeFile OK");
 
-  getRange(mySheet, 2, newUrlCol).offset(0,0,lastRow - 1, 0).clearContent();
-  getRange(mySheet, 2, docIdCol).offset(0,0,lastRow - 1, 0).clearContent();
+  getRange(mySheet, 2, newUrlCol).offset(0,0,lastRow - 1).clearContent();
+  getRange(mySheet, 2, docIdCol).offset(0,0,lastRow - 1).clearContent();
 
 }
 
@@ -405,13 +406,14 @@ function replaceLink(body, url){
     var urlLink = null;
     
     while (urlLink = body.findText(url, urlLink)){
-      var originUrl = urlLink.getElement().asText().getLinkUrl();
-//      if(originUrl == null && urlLink.isPartial()){        
-//        continue;
-//      }
+      urlLink.getElement().asText().setLinkUrl(null);
       Logger.log("リンクを設定します:" & urlLink.getElement().asText());
+      Logger.log("IsPartial? :" + urlLink.isPartial());
+      const startOffset = urlLink.getStartOffset();
+      const endOffsetInclusive = urlLink.getEndOffsetInclusive()
+      Logger.log("start:" + startOffset + " end:" + endOffsetInclusive);
       
-      urlLink.getElement().asText().setLinkUrl(url);
+      urlLink.getElement().asText().setLinkUrl(startOffset, endOffsetInclusive, url);
     }
     return body;
 }
