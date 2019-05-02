@@ -18,6 +18,7 @@ function onOpen(e) {
     {
     menu.addItem('URL短縮', 'generateShortUrls')
       .addItem('配信サンプル生成', 'createFiles')
+      .addItem('画像アップロード', 'openSidebar')
       .addItem('メール送信', 'sendMails')
       .addItem('結果をクリア', 'clearUrls')
       .addItem('新規キャンペーン', 'newCampaign')    
@@ -31,6 +32,7 @@ function onOpen(e) {
     else{
     menu.addItem('shorten URL', 'generateShortUrls')
       .addItem('generate doc', 'createFiles')
+      .addItem('upload image', 'openSidebar')
       .addItem('send emails', 'sendMails')
       .addItem('clear result', 'clearUrls')
       .addItem('new campaign', 'newCampaign')    
@@ -223,15 +225,13 @@ function test(){
 //}
 
 function getLastRowNumber(col){
-　 var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
- var last_row = mySheet.getLastRow();
+　var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
+  var last_row = mySheet.getLastRow();
+  const sheet = SpreadsheetApp.getActiveSheet(); 
+  const columnVals = getRange(mySheet, 1, col).offset(0,0, last_row).getValues();
+  const lastRow = columnVals.filter(String).length;  //空白を除き、配列の数を取得
 
-　for(var i = last_row; i >= 1; i--){
- 　  if(getRange(mySheet, i, col).getValue() != ''){
-     return i;
-　　　    break;
-　　  } 
-　 }
+  return lastRow;  
 }
 
 function createFiles(){  
@@ -371,7 +371,7 @@ function sendMails(){
     if(lang　=== 'ja'){
       newBody=body
       .replaceText("{お名前}",nickname)
-      .replaceText("{ドキュメント}",fileUrl);
+      .replaceText("{ドキュメント}",fileUrl)
     } else {
       newBody=body
       .replaceText("{nickname}",nickname)
@@ -487,6 +487,21 @@ function letterToColumn(letter)
   return column;
 }
 
+function resizeImage(image){
+  var width = image.getWidth();
+  var newW = width;
+  var height = image.getHeight();
+  var newH = height;
+  var ratio = width/height
+  
+  if(width>290){
+    newW = 290;
+    newH = parseInt(newW/ratio);
+  }  
+  image.setWidth(newW).setHeight(newH);
+
+}
+
 function generateFiles(folder){
   //◆開始時刻を取得
   var startTime = new Date();
@@ -511,7 +526,7 @@ function generateFiles(folder){
   // 中断に備えて、処理中のシート名を控えておく
   var sheetName = props.getProperty(resumeSheetKey);
   var mySheet=SpreadsheetApp.getActive().getSheetByName(sheetName); 
-  var endRow=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
+  var endRow = getLastRowNumber(NAME_COL); 　//シートの名前の最終行を取得
   var docIdCol = getNewIdCol();
 
   /* テンプレートは独立した文書で、ひとつだけ */
@@ -569,21 +584,43 @@ function generateFiles(folder){
     number = number.substring(number.length - 3);    
     
     var lang = Session.getActiveUserLocale();
-    var fileName = number + "_" + personName + lang　=== 'ja' ? "さん" : "";
+    var fileName = number + "_" + personName + "さん" ;
 
     var newFile = templateFile.makeCopy(fileName, folder);
     var docIdCell = getRange(mySheet,i,docIdCol);
+    var fileId = newFile.getId();
+    
 
-    docIdCell.setValue('=HYPERLINK("' + newFile.getUrl() + '","' + newFile.getId() + '")' ); // 新しいドキュメントIDを控えておく
+    docIdCell.setValue('=HYPERLINK("' + newFile.getUrl() + '","' + fileId + '")' ); // 新しいドキュメントIDを控えておく
 
-    var newDocument=DocumentApp.openById(newFile.getId()); //ドキュメントをIDで取得
+    var newDocument = DocumentApp.openById(fileId); //ドキュメントをIDで取得
+//    DocumentApp.
+    if(newDocument == null) {
+      Logger.log("newDocument == null")
+    };
+    
     var body = newDocument.getBody();
     
     var nicknameCol = getNicknameCol();
     var partnerName =  getRange(mySheet,i,NAME_COL).getValue();　// 紹介者名
     var nickname = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
 //    var strMessage =mySheet.getRange(i,3).getValue();　//メッセージ 
+    var imageIdCol = "AL";
+ 
+    var imageId = getRange(mySheet, i, imageIdCol).getValue();
+    const imageType =DocumentApp.ElementType.INLINE_IMAGE;
 
+    if(body.findText("{画像}")){  
+      var imagePlaceholder = body.findText("{画像}").getElement();
+      Logger.log("imagePlaceholder: " + imagePlaceholder)
+      var imageIndex =  body.getChildIndex(imagePlaceholder.getParent());
+      Logger.log("imageIndex:" + imagePlaceholder);
+      var image = DriveApp.getFileById(imageId);
+      var inlineImage = body.insertImage(imageIndex, image);
+      resizeImage(inlineImage);
+      imagePlaceholder.removeFromParent();
+    }
+    
     // 新しい本文を生成 (ここで置換を全部やる)
     var newBody = "";
     var lang = Session.getActiveUserLocale();
@@ -591,12 +628,12 @@ function generateFiles(folder){
       newBody=body
       .replaceText("{紹介者}",partnerName)
       .replaceText("{紹介者呼称}",nickname)
-      .replaceText("{短縮URL}",shortUrl);
+      .replaceText("{短縮URL}",shortUrl)
     } else {
       newBody=body
       .replaceText("{partnerName}",partnerName)
       .replaceText("{nickname}",nickname)
-      .replaceText("{shortUrl}",shortUrl);
+      .replaceText("{shortUrl}",shortUrl)
     }
 
     // リンクを編集

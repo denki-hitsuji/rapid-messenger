@@ -1,0 +1,151 @@
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>    
+<script>
+const label = document.querySelector('label');
+var file = null; // 選択されるファイル
+var blob = null; // 画像(BLOBデータ)
+
+const THUMBNAIL_WIDTH = 290; // 画像リサイズ後の横の長さの最大値
+const THUMBNAIL_HEIGHT = 500; // 画像リサイズ後の縦の長さの最大値
+
+      // Prevent forms from submitting.
+      function preventFormSubmit() {
+        var forms = document.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+          forms[i].addEventListener('submit', function(event) {
+            event.preventDefault();
+          });
+        }
+      }
+      window.addEventListener('load', preventFormSubmit);
+      
+      function handleFormSubmit(formObject) {
+        google.script.run.withSuccessHandler(renderImageFromFile).processImageForm(formObject);
+      }
+      
+      function renderImageFromFile(fileId) {
+        if (fileId){
+          //          alert(fileId);
+          var img = new Image();
+          var filePath ='http://drive.google.com/uc?export=view&id=' + fileId;
+          img.onload= function() {
+            var width, height;
+            // 横のサイズを指定値にあわせる
+            var ratio = img.height/img.width;
+            width = THUMBNAIL_WIDTH;
+            height = THUMBNAIL_WIDTH * ratio;
+            var canvas = $('#canvas')
+               .attr('width', width)
+               .attr('height', height);
+
+            // Draw (Resize)
+            var ctx = canvas[0].getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+          };
+          img.src=filePath;
+        }
+      }
+      
+      function renderImage(canvas, image) {
+          var ctx = canvas[0].getContext('2d');
+          ctx.drawImage(image, 0, 0, image.width, image.height);
+          return canvas;
+      }
+
+
+
+$(function() {
+  const rowNum = document.getElementById('rowNum');
+  function clearCanvas(){
+    var canvas = $('#canvas');
+    var ctx = canvas[0].getContext('2d');
+    // canvasに既に描画されている画像をクリア
+    ctx.clearRect(0,0,canvas[0].width,canvas[0].height);
+    return canvas;
+  }
+  
+　function showThumbnail(){
+    clearCanvas();
+    
+    const nameLabel = document.getElementById('nameLabel');
+    nameLabel.innerText = rowNum.value;
+    
+    google.script.run.withSuccessHandler(renderImageFromFile).getPictureId(rowNum.value);   
+ }
+　
+  rowNum.addEventListener('change', showThumbnail);
+
+
+  // ファイルが選択されたら
+  $('input[type=file]').change(function() {
+
+    // ファイルを取得
+    file = $(this).prop('files')[0];
+    // 選択されたファイルが画像かどうか判定
+    if (file.type != 'image/jpeg' && file.type != 'image/png') {
+      // 画像でない場合は終了
+      file = null;
+      blob = null;
+      return;
+    }
+
+    // 画像をリサイズする
+    var image = new Image();
+    var reader = new FileReader();
+    reader.onload = function(e) {
+    
+      image.onload = function() {
+        var width, height;
+        // 横のサイズを指定値にあわせる
+        var ratio = image.height/image.width;
+        width = THUMBNAIL_WIDTH;
+        height = THUMBNAIL_WIDTH * ratio;
+        // サムネ描画用canvasのサイズを上で算出した値に変更
+        var canvas = $('#canvas')
+                     .attr('width', width)
+                     .attr('height', height);
+        var ctx = canvas[0].getContext('2d');
+        // canvasに既に描画されている画像をクリア
+        ctx.clearRect(0,0,width,height);
+        // canvasにサムネイルを描画
+        ctx.drawImage(image,0,0,image.width,image.height,0,0,width,height);
+
+//        // canvasからbase64画像データを取得
+//        var base64 = canvas.get(0).toDataURL('image/jpeg');   
+//        //console.log(base64);
+//
+//        // base64からBlobデータを作成
+//        var barr, bin, i, len;
+//        bin = atob(base64.split('base64,')[1]);
+//        len = bin.length;
+//        barr = new Uint8Array(len);
+//        i = 0;
+//        while (i < len) {
+//          barr[i] = bin.charCodeAt(i);
+//          i++;
+//        }
+//        
+//        blob = new Blob([barr], {type: 'image/jpeg'});
+//        const nameLabel = document.getElementById('nameLabel');
+//        blob.setName(nameLabel.innerText + ".jpg");
+//        console.log(blob);
+//        var thumbnail = $("#thumbnail");
+//        thumbnail.val(blob);
+      }
+      clearCanvas();
+      image.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+  });
+
+  showThumbnail();
+});
+
+function onError(){
+  alert('設定値が保存できませんでした。');
+}
+</script>
