@@ -1,3 +1,9 @@
+/* pictureEngine 
+画像アップロードに関する処理を提供します。
+関連ファイル：upload.html+upload_js.html(アップローダー／ビューワー)
+*/
+
+
 function openSidebar(){
   var htmlOutput = 
  HtmlService.createTemplateFromFile('upload').evaluate();
@@ -34,12 +40,6 @@ function createImageFolder(){
 }
 
 function uploadImage(formObject) {
-  Logger.log("uploading...");
-  return 
-}
-
-
-function processImageForm(formObject) {
   Logger.log("processing form");
   Logger.log("myFile is:" + formObject.myFile);
 
