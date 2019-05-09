@@ -50,3 +50,5 @@ function getMailAddressCol(){
   { mailAddressCol = 5; }
   return mailAddressCol;
 }
+
+

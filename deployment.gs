@@ -15,6 +15,13 @@ getFeatureName に名前をつけて startCopy 実行します。
 function doPost(e){
   var params = JSON.parse(e.postData.getDataAsString());  // ※
   Logger.log("doPost started" + params);
+  
+  if(params.formType === "fileUploader"){
+    Logger.log("file upload");
+    uploadImage() ;
+    return;
+  }
+  
   var userName = params.name;
   var emailAddress = params.email;  
   lpUrl = params.lp;
@@ -29,8 +36,9 @@ function doPost(e){
 }
 
 function doGet(e){
-  var userName = params.name;
-  var emailAddress = params.email;  
+  // デプロイメント
+  var userName =  e.parameter.name? e.parameter.name : "";
+  var emailAddress =  e.parameter.email? e.parameter.email: "";  
   lpUrl = e.parameter.lp;
   
   if(userName.length == 0 || emailAddress.length == 0){

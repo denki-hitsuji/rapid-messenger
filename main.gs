@@ -1,3 +1,5 @@
+var _ = underscoreGS;
+
 function onInstall(e){ 
 //  onOpen(e);
 }
@@ -9,7 +11,8 @@ PropertiesService.getDocumentProperties().deleteProperty("startRow");
 function onOpen(e) {  
   Logger.log('AuthMode: ' + e.authMode);
   var lang = Session.getActiveUserLocale();
-  var menu = SpreadsheetApp.getUi().createAddonMenu();
+  var ui = SpreadsheetApp.getUi();
+  var menu = ui.createAddonMenu();
   if(e && e.authMode == 'NONE'){
     var startLabel = lang === 'ja' ? '使用開始' : 'start';
     menu.addItem(startLabel, 'askEnabled');
@@ -18,54 +21,72 @@ function onOpen(e) {
     {
     menu.addItem('URL短縮', 'generateShortUrls')
       .addItem('配信サンプル生成', 'createFiles')
-      .addItem('画像アップロード', 'openSidebar')
       .addItem('メール送信', 'sendMails')
-      .addItem('結果をクリア', 'clearUrls')
-      .addItem('新規キャンペーン', 'newCampaign')    
-      .addItem('設定', 'showDialog');
-//    var userProps = PropertiesService.getUserProperties();
-//    var setDefault = userProps.getProperty("willSetDefault");
-//    if(setDefault == 1){
-      menu.addItem('初期値設定', 'defineDefaultProperties');
-      menu.addItem('置き換え文字列一覧', 'showKeywords');
+      .addSeparator()
+      .addSubMenu(
+        ui.createMenu("便利機能")
+        .addItem('画像アップロード', 'openSidebar')
+        .addItem('結果をクリア', 'clearUrls')
+        .addItem('新規キャンペーン', 'newCampaign')    
+        .addItem('置き換え文字列一覧', 'showKeywords_jp')
+       )
+      .addSubMenu(
+        ui.createMenu("設定")
+        .addItem('設定画面', 'showDialog')
+        .addItem('初期値を設定', 'defineDefaultProperties')
+       );
     }
     else{
     menu.addItem('shorten URL', 'generateShortUrls')
       .addItem('generate doc', 'createFiles')
-      .addItem('upload image', 'openSidebar')
       .addItem('send emails', 'sendMails')
-      .addItem('clear result', 'clearUrls')
-      .addItem('new campaign', 'newCampaign')    
-      .addItem('config', 'showDialog');
+      .addSeparator()
+      .addSubMenu(
+        ui.createMenu("utilties")
+        .addItem('upload image', 'openSidebar')
+        .addItem('clear result', 'clearUrls')
+        .addItem('new campaign', 'newCampaign')    
+        .addItem('show placeholders', 'showKeywords_en')
+       )
+      .addSubMenu(
+        ui.createMenu("config")
+        .addItem('preferences', 'showDialog')
+        .addItem('set default', 'defineDefaultProperties')
+       );
+    
+    }
 //    var userProps = PropertiesService.getUserProperties();
 //    var setDefault = userProps.getProperty("willSetDefault");
 //    if(setDefault == 1){
-      menu.addItem('set default', 'defineDefaultProperties');
-      menu.addItem('show placeholders', 'showKeywords_en');
-    }
-//      menu.addItem('新規プロジェクト', 'defineDefaultProperties');
+      //setDefaultIfBlank();
 //    }
-    //setDefaultIfBlank();
   };
   menu.addToUi();
 
 };
 
-function showKeywords(){
-  var html = HtmlService.createTemplateFromFile('keywords.html').evaluate()
-      .setWidth(450)
-      .setHeight(300);
+function showKeywords(htmlFile, menuTitle, colWord ){
+  var replacers = getReplacingWords();
+  var replacingObj = _._map(replacers, function(rep, key){return "<label>" + rep + ' (' + key + colWord + ')</label> <input type="text" class="float-right"' 
+    + 'value="{' + rep + '}" />'}, null);
+  var replacingTexts = replacingObj.toString().replace(/,/g,'<br/>');
+  Logger.log(replacingTexts);
+  var body =  HtmlService.createTemplateFromFile(htmlFile).evaluate().getContent().replace('<hr/>', replacingTexts + '<hr/>');
+  var html = HtmlService.createHtmlOutput(body)
+      .setWidth(550)
+      .setHeight(550);
   SpreadsheetApp.getUi()
-      .showModalDialog(html, '置き換え文字列一覧');
+      .showModalDialog(html, menuTitle);
 }
 
+function showKeywords_jp(){
+  showKeywords('keywords.html', '置き換え文字列一覧', '列' );
+}
 
 function showKeywords_en(){
-  var html = HtmlService.createTemplateFromFile('keywords_en.html').evaluate()
-      .setWidth(450)
-      .setHeight(300);
-  SpreadsheetApp.getUi() 
-      .showModalDialog(html, 'Placeholder List');}
+  showKeywords('keywords_en.html', 'Placeholder List', 'column' );
+}
+
 
 function setDefaultIfBlank(){
   var isDocPartnerList = SpreadsheetApp.getActive().getName().match(/^3./);
@@ -502,149 +523,6 @@ function resizeImage(image){
 
 }
 
-function generateFiles(folder){
-  //◆開始時刻を取得
-  var startTime = new Date();
-  Logger.log("startTime:" + startTime);
-  var props = PropertiesService.getDocumentProperties();
-
-  //◆何行目まで処理したかを保存するときに使用するkey
-  var resumeSheetKey = 'resumeSheet';
-  var activeSsheetName = SpreadsheetApp.getActiveSheet().getSheetName();
- // Browser.msgBox(sheetName);
- // return;
-  props.setProperty(resumeSheetKey, activeSsheetName);
-  var startRowKey = "startRow";
-  var triggerKey = "trigger";
-  var startRow = parseInt(props.getProperty(startRowKey));
-  if(!startRow){
-    //初めて実行する場合はこっち。!startRow　は、startRowが0（空）の時。↓で初期値（始める行数）を設定
-    startRow = 2;
-  }
-  
-  /* スプレッドシートのシートを取得と準備 */
-  // 中断に備えて、処理中のシート名を控えておく
-  var sheetName = props.getProperty(resumeSheetKey);
-  var mySheet=SpreadsheetApp.getActive().getSheetByName(sheetName); 
-  var endRow = getLastRowNumber(NAME_COL); 　//シートの名前の最終行を取得
-  var docIdCol = getNewIdCol();
-
-  /* テンプレートは独立した文書で、ひとつだけ */
-  var strDocUrl= props.getProperty("templateDocId"); //ドキュメントのURL
-  var templateFile = DriveApp.getFileById(strDocUrl); 
-    
-  /* シートの全ての行について姓名を差し込みファイルを生成*/
-  for(var i=startRow;i<=endRow;i++){
-    
-     //◆開始時刻（startTime）とここの処理時点の時間を比較する 
-    var passedHalfMinutes = parseInt((new Date() - startTime) / (1000 * 30)); 
-    if(8 <= passedHalfMinutes){
-      //4分経過していたら処理を中断
-      Logger.log("Aborting on: Row " + i);
-
-      //何行まで処理したかを保存　参考:http://tbpgr.hatenablog.com/entry/2016/12/20/233349
-      //props.setProperty(startRowKey, i);
-      //トリガーを発行
-      setTrigger(triggerKey, "createFiles");
-      return;
-    }
-    
-    var personName = getRange(mySheet,i,NAME_COL).getValue().replace(" ", "");
-    
-    // 名前が途切れたところで処理終了
-    if (personName.length == 0){
-      deleteStartRow();
-      break;
-    }
-
-    var newUrlCol = getNewUrlCol(); 
-    var shortUrl = getRange(mySheet,i,newUrlCol).getValue();　// 短縮URL
-    // 短縮URLがない場合は処理終了
-    if (shortUrl.length == 0 || shortUrl == "undefined"){
-      deleteStartRow();
-      break;
-    }
-
-    var existingDocument = getRange(mySheet,i,docIdCol).getValue();
-    // 行をスキップする基準は、1.すでにドキュメントが生成済み 2.短縮URLが生成されてない
-    if(0 == shortUrl.length){
-      // Browser.msgBox(i + "行目はスキップ");
-      continue;
-    }
-    else if(0 < existingDocument.length)
-    {
-      //  Browser.msgBox(i + "行目は生成済み");
-      continue;
-    }
-    
-    Logger.log(i + "行目:" + shortUrl + " " + shortUrl.length );
- 
-    
-    var number = "000" + getRange(mySheet,i,1).getValue();
-    number = number.substring(number.length - 3);    
-    
-    var lang = Session.getActiveUserLocale();
-    var fileName = number + "_" + personName + "さん" ;
-
-    var newFile = templateFile.makeCopy(fileName, folder);
-    var docIdCell = getRange(mySheet,i,docIdCol);
-    var fileId = newFile.getId();
-    
-
-    docIdCell.setValue('=HYPERLINK("' + newFile.getUrl() + '","' + fileId + '")' ); // 新しいドキュメントIDを控えておく
-
-    var newDocument = DocumentApp.openById(fileId); //ドキュメントをIDで取得
-//    DocumentApp.
-    if(newDocument == null) {
-      Logger.log("newDocument == null")
-    };
-    
-    var body = newDocument.getBody();
-    
-    var nicknameCol = getNicknameCol();
-    var partnerName =  getRange(mySheet,i,NAME_COL).getValue();　// 紹介者名
-    var nickname = getRange(mySheet,i,nicknameCol).getValue();　//メール内呼称
-//    var strMessage =mySheet.getRange(i,3).getValue();　//メッセージ 
-    var imageIdCol = "AL";
- 
-    var imageId = getRange(mySheet, i, imageIdCol).getValue();
-    const imageType =DocumentApp.ElementType.INLINE_IMAGE;
-
-    if(body.findText("{画像}")){  
-      var imagePlaceholder = body.findText("{画像}").getElement();
-      Logger.log("imagePlaceholder: " + imagePlaceholder)
-      var imageIndex =  body.getChildIndex(imagePlaceholder.getParent());
-      Logger.log("imageIndex:" + imagePlaceholder);
-      var image = DriveApp.getFileById(imageId);
-      var inlineImage = body.insertImage(imageIndex, image);
-      resizeImage(inlineImage);
-      imagePlaceholder.removeFromParent();
-    }
-    
-    // 新しい本文を生成 (ここで置換を全部やる)
-    var newBody = "";
-    var lang = Session.getActiveUserLocale();
-    if(lang　=== 'ja'){
-      newBody=body
-      .replaceText("{紹介者}",partnerName)
-      .replaceText("{紹介者呼称}",nickname)
-      .replaceText("{短縮URL}",shortUrl)
-    } else {
-      newBody=body
-      .replaceText("{partnerName}",partnerName)
-      .replaceText("{nickname}",nickname)
-      .replaceText("{shortUrl}",shortUrl)
-    }
-
-    // リンクを編集
-    replaceLink(newBody, shortUrl);
-    
-    Logger.log("書き込みました：" + newBody); //ドキュメントの内容をログに表示
- 
-  }
-
-
-}
 
 //◆指定したkeyに保存されているトリガーIDを使って、トリガーを削除する
 function deleteTrigger(triggerKey) {
@@ -679,33 +557,6 @@ function setTrigger(triggerKey, funcName){
   
   //あとでトリガーを削除するためにトリガーIDを保存しておく
   PropertiesService.getDocumentProperties().setProperty(triggerKey, triggerId);
-}
-
-// 水平線の手前まで、ドキュメントの内容を取得します。
-function getTemplateSection(document){
-    var searchTypeParagraph = DocumentApp.ElementType.PARAGRAPH;
-    var searchTypeHR = DocumentApp.ElementType.HORIZONTAL_RULE;
-    var body = document.getBody();
-    var firstHR = body.findElement(searchTypeHR);
-    var templateBody = "";
-    var templateParagraph = null;
-    var theHr = firstHR.getElement();
-    Logger.log(theHr.getParent());
-    
-    // 水平線(HR)の前までがテンプレート。これを取得して値を差し込み、新しい本文を作る
-    while (templateParagraph = body.findElement(searchTypeParagraph, templateParagraph)){
-      var theParagraph = templateParagraph.getElement().asParagraph();
-      Logger.log("既存のテンプレート：" + theParagraph.getText());
-//      Logger.log("水平線前の段落" + theHr.getParent().getText());
-
-      if(body.getChildIndex( theHr.getParent()) <body.getChildIndex(theParagraph)){
-        Logger.log("水平線が見つかりました。" );
-        break;
-      }
-      templateBody += theParagraph.getText() + "\n"; //最初の段落の内容を取得
-    }
-    Logger.log("テンプレート全体： " + templateBody); 
-    return templateBody;
 }
 
 function createNewFolder(){
