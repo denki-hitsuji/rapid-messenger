@@ -191,7 +191,16 @@ function generateFiles(folder){
  
     var imageId = getRange(mySheet, i, imageIdCol).getValue();
     const imageType =DocumentApp.ElementType.INLINE_IMAGE;
+    const imageUrl = "http://drive.google.com/uc?export=view&id=" + imageId;
 
+    var tagImage = body.findText("<p.+?{画像}.*?</p>");
+    while(tagImage){
+      Logger.log("画像タグ発見");
+      const tagText = tagImage.getElement().asText();
+      const element = tagText.replaceText("{画像}", "<img src='" + imageUrl +"' width=290px />");
+//      Logger.log(element);
+      tagImage = body.findText("<p.+?{画像}.*?</p>", tagImage);
+    }
     if(body.findText("{画像}")){  
       var imagePlaceholder = body.findText("{画像}").getElement();
       Logger.log("imagePlaceholder: " + imagePlaceholder.getText())
