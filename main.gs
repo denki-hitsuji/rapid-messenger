@@ -188,7 +188,7 @@ function clearUrls(){
 //  Browser.msgBox ("endRow OK");
   var newUrlCol = getNewUrlCol(); //AA;
   var docIdCol = getNewIdCol(); //AH
-  var lastRow = getLastRowNumber(docIdCol); 
+  var lastRow = getLastRowNumber(NAME_COL); 
 //  Browser.msgBox ("newUrlCol OK " + newUrlCol + " " + docIdCol);
 //  Logger.log("lastRow:" + lastRow);
 
@@ -353,7 +353,13 @@ function sendMails(){
   var mySheet=SpreadsheetApp.getActiveSheet(); //シートを取得
   var endRow=mySheet.getDataRange().getLastRow(); //シートの使用範囲のうち最終行を取得
   var userName = PropertiesService.getUserProperties().getProperty("userName");
+  var ui = SpreadsheetApp.getUi();
   
+  const mailAddressCol = getMailAddressCol();
+  const howManyReceivers = getLastRowNumber(mailAddressCol) -1; 
+  var button = ui.alert('送信数:' + howManyReceivers + '通\nメールを送信しますか？', ui.ButtonSet.OK_CANCEL);
+  if( button != ui.Button.OK) return;
+
   /* メールテンプレートは独立した文書 */
   // 紹介依頼メールテンプレート
   logProperties();
@@ -370,7 +376,6 @@ function sendMails(){
 
     var docIdCol = getNewIdCol();
     var nicknameCol = getNicknameCol();
-    var mailAddressCol = getMailAddressCol();
     
     var documentId = getRange(mySheet, i,docIdCol).getValue(); // ドキュメントID 
     var fileUrl = DriveApp.getFileById(documentId).getUrl();
@@ -399,7 +404,7 @@ function sendMails(){
       .replaceText("{docUrl}",fileUrl);
     }
     // リンクを編集
-    var mailBody = replaceLink(newBody, fileUrl).getText();
+    var mailBody = replaceLinks(newBody, fileUrl).getText();
     
     var to = emailAddress;
     var subject = "";
@@ -437,20 +442,26 @@ function isMailAddressValid(mailAddress)
    return mailAddress.match(mailFormat);
 }
 
-function replaceLink(body, url){
+function replaceLinks(body, url){
     var urlLink = null;
     
     while (urlLink = body.findText(url, urlLink)){
-      urlLink.getElement().asText().setLinkUrl(null);
-      Logger.log("リンクを設定します:" & urlLink.getElement().asText());
-      Logger.log("IsPartial? :" + urlLink.isPartial());
-      const startOffset = urlLink.getStartOffset();
-      const endOffsetInclusive = urlLink.getEndOffsetInclusive()
-      Logger.log("start:" + startOffset + " end:" + endOffsetInclusive);
-      
-      urlLink.getElement().asText().setLinkUrl(startOffset, endOffsetInclusive, url);
+      link(urlLink, url);
     }
     return body;
+}
+
+function link(urlLink, url)
+{
+  urlLink.getElement().asText().setLinkUrl(null);
+  Logger.log("リンクを設定します:" + urlLink.getElement().asText().getText());
+  Logger.log("IsPartial? :" + urlLink.isPartial());
+  const startOffset = urlLink.getStartOffset();
+  const endOffsetInclusive = urlLink.getEndOffsetInclusive();
+  const length = urlLink.getElement().asText().getText().length;
+  Logger.log("start:" + startOffset + " end:" + endOffsetInclusive + " length:" + length);
+  
+  urlLink.getElement().asText().setLinkUrl(startOffset, endOffsetInclusive, url);
 }
 
 function generateShortUrls(){
@@ -480,19 +491,18 @@ function generateShortUrls(){
     var originUrl = getRange(mySheet,i,originUrlCol).getValue();　// 元のURL
     Logger.log(originUrl);
     //Browser.msgBox("originUrl =" + originUrl);
-    var shortUrl =  shorten(originUrl);
+    var shortUrl =  shorten(originUrl).replace('http://','https://');
     getRange(mySheet,i,newUrlCol).setValue(shortUrl);
   }
 }
 
-function shorten(originUrl){
-   //var url = UrlShortener.Url.insert({longUrl: originUrl});
-   //return url.id; 
-  
+function shorten(originUrl){  
    var token = PropertiesService.getDocumentProperties().getProperty("bitly_token");
-   var url = "https://api-ssl.bitly.com/v3/shorten?access_token=" + token + "&longUrl=" + encodeURIComponent(originUrl);
+   var url = "https://api-ssl.bitly.com/v3/shorten?access_token=" + token + "&longUrl=" + encodeURIComponent(originUrl.trim());
+   console.log(url);
    var responseApi = UrlFetchApp.fetch(url);
    var responseJson = JSON.parse(responseApi.getContentText());
+   console.log("URL shortened:" + responseJson["data"]["url"]);
    return responseJson["data"]["url"];
 }
 

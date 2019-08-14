@@ -194,12 +194,14 @@ function generateFiles(folder){
 
     if(body.findText("{画像}")){  
       var imagePlaceholder = body.findText("{画像}").getElement();
-      Logger.log("imagePlaceholder: " + imagePlaceholder)
+      Logger.log("imagePlaceholder: " + imagePlaceholder.getText())
       var imageIndex =  body.getChildIndex(imagePlaceholder.getParent());
-      Logger.log("imageIndex:" + imagePlaceholder);
-      var image = DriveApp.getFileById(imageId);
-      var inlineImage = body.insertImage(imageIndex, image);
-      resizeImage(inlineImage);
+      Logger.log("imageIndex:" + imageIndex);
+      if(imageId){
+        var image = DriveApp.getFileById(imageId);
+        var inlineImage = body.insertImage(imageIndex, image);
+        resizeImage(inlineImage);
+      }
       imagePlaceholder.removeFromParent();
     }
     
@@ -224,7 +226,7 @@ function generateFiles(folder){
     }, null)
 
     // リンクを編集
-    replaceLink(newBody, shortUrl);
+    replaceLinks(newBody, shortUrl);
     
     Logger.log("書き込みました：" + newBody); //ドキュメントの内容をログに表示
  

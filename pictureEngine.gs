@@ -39,6 +39,7 @@ function createImageFolder(){
   return newFolder;
 }
 
+// 画像をアップロードします。
 function uploadImage(formObject) {
   Logger.log("processing form");
   Logger.log("myFile is:" + formObject.myFile);
@@ -76,6 +77,7 @@ function getRowById(sheet, id){
   while(cell.getColumn() != idCol){
     cell = tf.findNext();
   }
+  Logger.log("returned:" + cell.getA1Notation());
   return cell.getRow();
 }
 
@@ -102,5 +104,25 @@ function savePictureId　(rowId, pictureId) {
   if(cell) cell.setValue(pictureId);
 }
 
+var thisSheet;
+function getThisSheet(){
+if( thisSheet == null)
+  thisSheet = SpreadsheetApp.getActiveSheet();
+  
+ return thisSheet;
+}
+
+function getPartnerName(rowId){
+  // 名前を取得
+  // ファイルのIDを取り出す
+  // ファイルのIDを使って、イメージファイルを取得
+  // タグにして貼り付け
+  var row = getRowById(getThisSheet(), rowId);
+  //Logger.log("row is " + row);
+
+  var personName = getRange(getThisSheet(), row, NAME_COL).getValue();
+  Logger.log("name is " + personName);
+  return personName; 
+}
 
 
