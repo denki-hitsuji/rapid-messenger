@@ -3,21 +3,23 @@
   <head>
     <base target="_top">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
-        <script>
+    <script>
 
 
     </script>
   </head>
   <body>
     <form id="myForm" onsubmit="handleFormSubmit(this)">
-      <input id="rowNum" name="rowNum" type="number" min="1" value="1" style="width:60px;"/>
+      <input id="rowNum" name="rowNum" type="number" min="1" value="1" style="width:60px;" class="float-right"/>
       <label id='nameLabel'></label>
       <input name="myFile" type="file" accept="image/*" /><br><br>
       <input id="thumbnail" name="thumbnail" type="hidden" value="" />
-      <input name="willResize" type="checkbox" value="1" checked="checked">
-      <input type="submit" value="Submit" />
+      <input type="submit" value="保存" class="float-right" />
     </form>
-    <div id="output"><img id=image1 style="width:100%;" ><canvas id="canvas" width="0" height="0"></canvas><label id="loadingLabel" style="visibility:hidden;">画像読み込み中...</label></div>
+    <div id="output"><img id=image1 style="width:100%;" >
+    <canvas id="canvas" width="0" height="0"></canvas>
+    <label id="loadingLabel" style="visibility:hidden;">画像読み込み中...</label></div>
+    <p id="saved" style="margin-top:30px;margin-bottom:30px; visibility:hidden;" class="float-right">保存しました。</p> 
     <?!= include('upload_js'); ?>
 
   </body>

@@ -23,11 +23,17 @@ const THUMBNAIL_HEIGHT = 500; // 画像リサイズ後の縦の長さの最大�
       window.addEventListener('load', preventFormSubmit);
       
       function handleFormSubmit(formObject) {
-        google.script.run.withSuccessHandler(renderImageFromFile).uploadImage(formObject);
+        google.script.run.withSuccessHandler(onUploaded).uploadImage(formObject);
+      }
+      
+      function onUploaded(fileId){
+        renderImageFromFile(fileId);
+        document.getElementById("saved").style.visibility='visible';
       }
       
       function renderImageFromFile(fileId) {
         if (fileId){
+  
           //          alert(fileId);
           var img = new Image();
           var filePath ='http://drive.google.com/uc?export=view&id=' + fileId;
@@ -44,8 +50,10 @@ const THUMBNAIL_HEIGHT = 500; // 画像リサイズ後の縦の長さの最大�
             // Draw (Resize)
             var ctx = canvas[0].getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
+            document.getElementById("loadingLabel").style.visibility='hidden';
           };
           img.src=filePath;
+          
         }
       }
       
@@ -64,15 +72,21 @@ $(function() {
     var ctx = canvas[0].getContext('2d');
     // canvasに既に描画されている画像をクリア
     ctx.clearRect(0,0,canvas[0].width,canvas[0].height);
+      document.getElementById("saved").style.visibility='hidden';
+        
     return canvas;
   }
   
+ function showName(name){
+   const nameLabel = document.getElementById('nameLabel');
+    nameLabel.innerText = name + " さん";
+ }
+ 
 　function showThumbnail(){
     clearCanvas();
-    
-    const nameLabel = document.getElementById('nameLabel');
-    nameLabel.innerText = rowNum.value;
-    
+    document.getElementById("loadingLabel").style.visibility='visible';
+   
+    google.script.run.withSuccessHandler(showName).getPartnerName(rowNum.value);       
     google.script.run.withSuccessHandler(renderImageFromFile).getPictureId(rowNum.value);   
  }
 　
