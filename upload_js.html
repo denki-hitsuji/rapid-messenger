@@ -23,12 +23,14 @@ const THUMBNAIL_HEIGHT = 500; // 画像リサイズ後の縦の長さの最大�
       window.addEventListener('load', preventFormSubmit);
       
       function handleFormSubmit(formObject) {
+        document.getElementById("uploading").style.display='block';
         google.script.run.withSuccessHandler(onUploaded).uploadImage(formObject);
       }
       
       function onUploaded(fileId){
         renderImageFromFile(fileId);
-        document.getElementById("saved").style.visibility='visible';
+        document.getElementById("uploading").style.display='none';
+        document.getElementById("saved").style.display='block';
       }
       
       function renderImageFromFile(fileId) {
@@ -50,7 +52,7 @@ const THUMBNAIL_HEIGHT = 500; // 画像リサイズ後の縦の長さの最大�
             // Draw (Resize)
             var ctx = canvas[0].getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            document.getElementById("loadingLabel").style.visibility='hidden';
+            document.getElementById("loadingLabel").style.display='none';
           };
           img.src=filePath;
           
@@ -72,7 +74,7 @@ $(function() {
     var ctx = canvas[0].getContext('2d');
     // canvasに既に描画されている画像をクリア
     ctx.clearRect(0,0,canvas[0].width,canvas[0].height);
-      document.getElementById("saved").style.visibility='hidden';
+      document.getElementById("saved").style.display='none';
         
     return canvas;
   }
@@ -84,7 +86,7 @@ $(function() {
  
 　function showThumbnail(){
     clearCanvas();
-    document.getElementById("loadingLabel").style.visibility='visible';
+    document.getElementById("loadingLabel").style.display='block';
    
     google.script.run.withSuccessHandler(showName).getPartnerName(rowNum.value);       
     google.script.run.withSuccessHandler(renderImageFromFile).getPictureId(rowNum.value);   
